@@ -1,0 +1,167 @@
+@using MemberDatabase.Data
+@using Microsoft.AspNetCore.Identity
+
+@inject SignInManager<MemberUserInfo> SignInManager
+@inject UserManager<MemberUserInfo> UserManager
+
+@{
+    ViewData["Title"] = "My Family";
+}
+<h2>@ViewData["Title"]</h2>
+
+
+
+
+@section Scripts {
+    <script>
+        function withdrawRequest(reqId, index)
+        {
+            $.ajax({
+                method: "POST",
+                data: {
+                    i: reqId
+                },
+                url: '@Url.Action("RemoveRelationship", "Home")',
+                success: function (ret){
+                    var element = document.getElementById('req_' + index);
+                    element.remove();
+                    alert(ret);
+                },
+                error: function (){
+                    alert("Some error occurred");
+                }
+            });
+        }
+
+        function confirmRequest(reqId, index)
+        {
+            $.ajax({
+                method: "POST",
+                data: {
+                    i: reqId
+                },
+                url: '@Url.Action("ConfirmRelationship","Home")',
+                success: function (ret){
+                    var element = document.getElementById('req_' + index);
+                    element.remove();
+                    if(ret.type == 1) {
+                        document.getElementById('spouse').innerText = ret.source;
+                    }
+                    else{
+                        document.getElementById('parents').innerText += ret.source;
+                        document.getElementById('parents').innerText += ret.otherParent;
+                    }
+                    alert("Successful.");
+                },
+                error: function (){
+                    alert("Some error occurred");
+                }
+            });
+        }
+
+    </script>
+
+
+}
+
+
+
+
+
+@{
+    var self = await UserManager.GetUserAsync(User);
+
+    <div>
+        <h3>My parents are:</h3>
+        <p id="parents">@ViewBag.Parent1 &nbsp; @ViewBag.Parent2</p>
+    </div>
+
+    <div>
+        <h3>My spouse is:</h3>
+        <p id="spouse">@ViewBag.Spouse</p>
+    </div>
+
+    <div>
+        <h3>My children are:</h3>
+        <p id="children">@ViewBag.Child1 &nbsp; @ViewBag.Child2 </p>
+    </div>
+
+
+
+
+    if (ViewBag.relation != null && ViewBag.relation.Count != 0)
+    {
+        var counter = 0;
+        foreach (var i in ViewBag.relation)
+        {
+            counter++;
+            if (i.Relationship == 2) //pending adoption request
+                {
+                    if(i.SourceUser == self.Id)
+                    {
+                        <p id="req_@counter">
+                            You have asked @UserManager.FindByIdAsync(i.TargetUser).Result.UserName to become your child. If you no longer see this meesage and the other user does not appear above, it means your request has been rejected.
+                            <a class="btn btn-primary" href="javascript:void(0)" onclick="withdrawRequest('@i.Id', '@counter')">Withdraw</a>
+                        </p>
+                    }
+                    else
+                    {
+                        <p id="req_@counter"> 
+                            @UserManager.FindByIdAsync(i.SourceUser).Result.UserName has asked you to become his/her child. 
+                            <a class="btn btn-primary" href="javascript:void(0)" onclick="confirmRequest('@i.Id', '@counter')">Confirm</a>
+                            <a class="btn btn-primary" href="javascript:void(0)" onclick="withdrawRequest('@i.Id', '@counter')">Reject</a>
+                        </p>
+                    }
+                }
+            else //pending marriage request
+            {
+                    if(i.SourceUser == self.Id)
+                    {
+                        <p id="req_@counter">
+                            You have asked @UserManager.FindByIdAsync(i.TargetUser).Result.UserName to become your spouse. If you no longer see this meesage and the other user does not appear above, it means your request has been rejected.
+                            <a class="btn btn-primary" href="javascript:void(0)" onclick="withdrawRequest('@i.Id', '@counter')">Withdraw</a>
+                        </p>
+                    }
+                    else
+                    {
+                        <p id="req_@counter"> 
+                            @UserManager.FindByIdAsync(i.SourceUser).Result.UserName has asked you to become his/her spouse. 
+                            <a class="btn btn-primary" href="javascript:void(0)" onclick="confirmRequest('@i.Id', '@counter')">Confirm</a>
+                            <a class="btn btn-primary" href="javascript:void(0)" onclick="withdrawRequest('@i.Id', '@counter')">Reject</a>
+                        </p>
+                    }
+            }
+        
+        }
+    }
+    else 
+    {
+       // <p>You have no family members yet. :(</p>
+    }
+}
+
+<a asp-action="AddMembers" asp-controller="Home">Add family members</a>
+
+
+
+
+
+
+
+
+@*
+
+//也就是说
+//这个relation出来的list其实不是null
+//但是list里面没东西√
+//明白了
+//ok然后
+//求解释一下刚才那一堆操作是怎么解决最开始的问题的
+//就那个没有database
+
+//因为你得把连接字符串传进去
+//你直接用UserManager的时候他帮你在底层弄好了，用的是第二个constructor
+//但是你用的是第一个，第一个并没吧connectionString配置好所以不知道要连接哪里的数据库
+//所以我就把第一个Constructor改了一下，传个connection string进去，并且重写一下OnConfigure
+//如果connection string还没有配置的话就把传进来的connectionstring添加进去。
+*@

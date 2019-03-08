@@ -1,0 +1,146 @@
+@using MemberDatabase.Data
+@using Microsoft.AspNetCore.Identity
+
+@inject SignInManager<MemberUserInfo> SignInManager
+@inject UserManager<MemberUserInfo> UserManager
+
+
+
+@if(ViewBag.Privilege != 2){
+    <h2>Sorry, you are not authorized to view this page.</h2>
+    return;
+}
+
+<button type = 'button' onclick = 'getUser()' class = 'btn btn-primary btn-sm'>Display all users</button>
+
+<div>
+    <h3 id="Name"></h3>
+    <h3 id="Privilege"></h3>
+    <h3 id="College"></h3>
+    <h3 id="Subject"></h3>
+    <h3 id="Year of admission"></h3>
+    <h3 id="Spouse"></h3>
+</div>
+
+<table class="table">
+    <thead>
+        <th>User Name</th>
+        <th>Married</th>
+        <th>Has Parents</th>
+        <th>Actions</th>
+    </thead>
+    <tbody id="results"></tbody>
+</table>
+
+
+
+@section Scripts {
+    <script>
+        function getUser()
+        {
+            $.ajax({
+                method: "POST",
+                data:{
+                },
+                url: '@Url.Action("GetAll","Home")',
+                success: function(ret) { //this time the whole list of users is returned
+                    var container = document.getElementById('results');
+                    container.innerHTML = ""; //innerHTML accesses content
+                    for (var i=0; i<ret.length;i++){ //毕竟后端en返回回来的是个collection
+                        var row = document.createElement('tr');
+                        var userNameCol = document.createElement('td');
+                        userNameCol.innerHTML = ret[i].userName;
+                        row.appendChild(userNameCol);
+
+
+                        var marriedCol = document.createElement('td');
+                        if(ret[i].spouse != null)
+                        {
+                            marriedCol.innerHTML = "Yes";
+                        }
+                        else
+                        {
+                            marriedCol.innerHTML = "No";
+                        }
+                        row.appendChild(marriedCol);
+
+                        var hasParentsCol = document.createElement('td');
+                        if(ret[i].parent1 != null) {
+                            hasParentsCol.innerHTML = "Yes";
+                        }
+                        else{
+                            hasParentsCol.innerHTML = "No";
+                        }
+                        row.appendChild(hasParentsCol);
+
+                        var actionCol = document.createElement('td');
+                        actionCol.innerHTML = 
+                            "<button type='button' onclick='select(\"" + ret[i].id + "\",1"
+                            + ")' class='btn btn-primary btn-sm'>Confirm Member Status</button>"
+                            + "<span>&nbsp;&nbsp;</span>"
+                            + "<button type='button' onclick='select(\"" + ret[i].id + "\",2"
+                            + ")' class='btn btn-primary btn-sm'>Confirm Committee Status</button>"
+                            + "&nbsp; &nbsp"
+                            + "<button type='button' onclick='select(\"" + ret[i].id + "\",3"
+                            + ")' class='btn btn-primary btn-sm'>Clear all relationships</button>"
+                            + "<span>&nbsp;&nbsp;</span>"
+                            + "<button type='button' onclick='profile(\"" + ret[i].id +"\""
+                            + ")' class='btn btn-primary btn-sm'>Basic Information</button>" 
+                        row.appendChild(actionCol);
+                        container.appendChild(row);
+                    }                    // 1--confirm  2--clear all
+                },
+                error: function() {
+                    alert("some error occurred");
+                }
+            });
+        }
+
+//let's think about functionalities
+//clear all relationships; confirm member status; 
+
+        function select(user, type){
+            $.ajax({
+                url: '@Url.Action("ManageUser", "Home")', //我在后端还没定义这个函数，等会再实现
+                data: {
+                    userId: user,
+                    type: type
+                },
+                method: "POST",
+                success: function(ret){
+                    alert(ret);
+                },
+                error: function(){
+                    alert("Some error occurred, please try again later.");
+                }
+            })
+        }
+
+        function profile(user){
+            $.ajax({
+
+                url: '@Url.Action("GetUserInfo", "Home")',
+                data: {
+                    id: user,
+                },
+                method: "POST",
+                success: function(ret){
+                    document.getElementById('Name').innerHTML = ret.name;
+                    document.getElementById('Privilege').innerHTML = ret.privilege;
+                    document.getElementById('Subject').innerHTML = ret.subject;
+                    document.getElementById('College').innerHTML = ret.college;
+                    document.getElementById('Year of admission').innerHTML = ret.yoa;
+                    document.getElementById('Spouse').innerHTML = "Married to " + ret.spouse;
+                },
+                error: function(){
+                    alert("Some error occurred, please try again later.");
+                }
+            })
+        }
+
+    </script>
+
+
+
+
+}
